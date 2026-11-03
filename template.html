@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{page_title}}</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    max-width: 38rem;
+    margin: 0 auto;
+    padding: 1rem;
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    line-height: 1.8;
+  }
+  header { margin: 1rem 0 2rem; }
+  header a { font-size: 1.2rem; font-weight: bold; text-decoration: none; color: inherit; }
+  article { margin: 0 0 2rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(128, 128, 128, 0.3); }
+  article h2 { font-size: 0.95rem; font-weight: normal; margin: 0 0 0.5rem; }
+  article h2 a { color: inherit; }
+  article h3 { font-size: 1.1rem; margin: 1rem 0 0.5rem; }
+  p { margin: 0.5rem 0; }
+  .pager { display: flex; justify-content: space-between; margin: 1rem 0 2rem; }
+  .archive { margin: 2rem 0; }
+  .archive h2 { font-size: 0.95rem; font-weight: normal; margin: 0 0 0.5rem; }
+  .archive ul { margin: 0; padding-left: 1.2rem; }
+</style>
+</head>
+<body>
+<header><a href="index.html">{{site_title}}</a></header>
+<main>
+{{content}}
+</main>
+<footer>
+{{archive}}
+</footer>
+</body>
+</html>
