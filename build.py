@@ -18,6 +18,8 @@ import markdown
 # ---- 設定 ------------------------------------------------------------
 SITE_TITLE = "diary"   # サイトの名前
 INDEX_DAYS = 10        # トップページに本文ごと並べる日数
+AUTHOR = "TOM"   # 書いた人の名前
+AUTHOR_URL = ""        # プロフィールのURL(Instagramなど)。空なら名前だけ表示
 # ---------------------------------------------------------------------
 
 POSTS_DIR = Path("posts")
@@ -115,11 +117,15 @@ def render_archive(months):
 
 def write_page(filename, title, content, archive):
     page_title = SITE_TITLE if title is None else f"{title} - {SITE_TITLE}"
+    author = html.escape(AUTHOR)
+    author_html = f'<a href="{html.escape(AUTHOR_URL)}">{author}</a>' if AUTHOR_URL else author
     values = {
         "page_title": html.escape(page_title),
         "site_title": html.escape(SITE_TITLE),
         "content": content,
         "archive": archive,
+        "author": author,
+        "author_html": author_html,
     }
     # 1回の置換で済ませる(本文中に {{...}} があっても影響しない)
     page = re.sub(
