@@ -17,9 +17,11 @@ import markdown
 
 # ---- 設定 ------------------------------------------------------------
 SITE_TITLE = "diary"   # サイトの名前
-INDEX_DAYS = 10        # トップページに本文ごと並べる日数
+SITE_DESCRIPTION = ""  # サイトの説明(SNSなどにURLを貼ったときに出る。空なら出さない)
+SITE_URL = "https://tomnyancat.github.io/diary/"  # 公開されるURL(OGPに必要)
 AUTHOR = "TOM"   # 書いた人の名前
 AUTHOR_URL = ""        # プロフィールのURL(Instagramなど)。空なら名前だけ表示
+INDEX_DAYS = 10        # トップページに本文ごと並べる日数
 # ---------------------------------------------------------------------
 
 POSTS_DIR = Path("posts")
@@ -32,6 +34,12 @@ FILENAME_RE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})\.md$")
 INSTAGRAM_RE = re.compile(r"^Instagram\s*:\s*(https?://\S+)\s*$", re.MULTILINE)
 
 
+def plain_text(fragment):
+    text = re.sub(r"<br\s*/?>", " ", fragment)
+    text = re.sub(r"<[^>]+>", "", text)
+    return re.sub(r"\s+", " ", html.unescape(text)).strip()
+
+
 @dataclass
 class Day:
     date: date
@@ -40,6 +48,22 @@ class Day:
     @property
     def slug(self):
         return self.date.isoformat()
+
+    @property
+    def title(self):
+        """最初の見出し(書名)。SNSに貼ったときのタイトルに使う"""
+        m = re.search(r"<h3>(.*?)</h3>", self.body, re.DOTALL)
+        return plain_text(m.group(1)) if m else ""
+
+    @property
+    def summary(self):
+        """最初の本文の段落(100文字まで)。リンクだけの段落は飛ばす"""
+        for m in re.finditer(r"<p>(.*?)</p>", self.body, re.DOTALL):
+            if re.fullmatch(r"<a [^>]*>[^<]*</a>", m.group(1).strip()):
+                continue
+            text = plain_text(m.group(1))
+            return text if len(text) <= 100 else text[:100] + "…"
+        return ""
 
 
 def instagram_link(match):
@@ -115,17 +139,44 @@ def render_archive(months):
     return f'<nav class="archive">\n<h2>アーカイブ</h2>\n<ul>\n{items}\n</ul>\n</nav>'
 
 
-def write_page(filename, title, content, archive):
+def render_meta(title, description, filename):
+    is_index = filename == "index.html"
+    url = ""
+    if SITE_URL:
+        url = SITE_URL.rstrip("/") + "/" + ("" if is_index else filename)
+    tags = [
+        ("name", "author", AUTHOR),
+        ("name", "description", description),
+        ("property", "og:type", "website" if is_index else "article"),
+        ("property", "og:site_name", SITE_TITLE),
+        ("property", "og:title", title),
+        ("property", "og:description", description),
+        ("property", "og:url", url),
+        ("property", "og:locale", "ja_JP"),
+        ("name", "twitter:card", "summary"),
+    ]
+    # 値が空のタグは出さない
+    return "\n".join(
+        f'<meta {attr}="{key}" content="{html.escape(value)}">'
+        for attr, key, value in tags
+        if value
+    )
+
+
+def write_page(filename, title, content, archive, og_title=None, description=None):
     page_title = SITE_TITLE if title is None else f"{title} - {SITE_TITLE}"
+    if description is None:
+        description = SITE_DESCRIPTION
     author = html.escape(AUTHOR)
-    author_html = f'<a href="{html.escape(AUTHOR_URL)}">{author}</a>' if AUTHOR_URL else author
+    if AUTHOR_URL:
+        author = f'<a href="{html.escape(AUTHOR_URL)}">{author}</a>'
     values = {
         "page_title": html.escape(page_title),
         "site_title": html.escape(SITE_TITLE),
+        "meta": render_meta(og_title or page_title, description, filename),
         "content": content,
         "archive": archive,
-        "author": author,
-        "author_html": author_html,
+        "author_html": author,
     }
     # 1回の置換で済ませる(本文中に {{...}} があっても影響しない)
     page = re.sub(
@@ -161,7 +212,14 @@ def main():
         newer = days[i - 1] if i > 0 else None
         older = days[i + 1] if i + 1 < len(days) else None
         content = render_article(day, link=False) + "\n" + render_pager(newer, older)
-        write_page(f"{day.slug}.html", jp_date(day.date), content, archive)
+        write_page(
+            f"{day.slug}.html",
+            jp_date(day.date),
+            content,
+            archive,
+            og_title=day.title or jp_date(day.date),
+            description=day.summary,
+        )
 
     # 月別ページ
     for key, month_days in months.items():
